@@ -816,6 +816,13 @@ impl Process {
         }
     }
 
+    /// Returns the device identifier of the TTY device that is currently
+    /// attached to the given process
+    #[cfg(target_os = "macos")]
+    pub fn tty_device_id(pid: WithProcess) -> std::io::Result<Option<DeviceId>> {
+        Ok(None)
+    }
+
     /// Get the process starting time of a specific process
     #[cfg(target_os = "linux")]
     pub fn starting_time(pid: WithProcess) -> io::Result<ProcessCreateTime> {
@@ -845,6 +852,12 @@ impl Process {
             i64::from(ki_start.tv_sec),
             i64::from(ki_start.tv_usec) * 1000,
         ))
+    }
+
+    /// Get the process starting time of a specific process
+    #[cfg(target_os = "macos")]
+    pub fn starting_time(pid: WithProcess) -> io::Result<ProcessCreateTime> {
+        Ok(ProcessCreateTime::new(0, 0))
     }
 }
 
