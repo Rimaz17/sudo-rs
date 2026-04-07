@@ -403,7 +403,6 @@ fn traversed_secure_open(
 
     let user_cannot_write = |file: &File| -> io::Result<()> {
         let meta = file.metadata()?;
-        let perms = meta.permissions().mode();
 
         if meta.uid() == forbidden_user.uid.inner() {
             // Owner can change file permissions
@@ -413,16 +412,20 @@ fn traversed_secure_open(
             ));
         }
 
-        let user_has_write_perms = if cfg!(test) {
+        #[cfg(any(test, target_os = "macos"))]
+        let user_has_write_perms = {
             // During testing we do a less comprehensive check as we don't have
             // permission to set the real user id to arbitrary users, but faccessat
             // looks at the real user id.
+            let perms = meta.permissions().mode();
             perms & mode(Category::World, Op::Write) != 0
                 || (perms & mode(Category::Group, Op::Write) != 0)
                     && forbidden_user.in_group_by_gid(GroupId::new(meta.gid()))
                 || (perms & mode(Category::Owner, Op::Write) != 0)
                     && forbidden_user.uid.inner() == meta.uid()
-        } else {
+        };
+        #[cfg(not(any(test, target_os = "macos")))]
+        let user_has_write_perms = {
             // Only works when forbidden_user is current user. This is enforced
             // by accepting CurrentUser outside of test mode.
             // We don't pass AT_EACCESS to faccessat to make it check using the
